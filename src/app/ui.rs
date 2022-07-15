@@ -1,12 +1,10 @@
-use std::borrow::{Borrow, BorrowMut};
-
-use chrono::{Date, Datelike, Utc};
+use chrono::{Datelike, Utc};
 use tui::{
     backend::Backend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     text::Text,
-    widgets::{Block, BorderType, Borders, Cell, Paragraph, Row, Table},
+    widgets::{Block, Cell, List, ListItem, Paragraph, Row, Table},
     Frame,
 };
 
@@ -61,6 +59,7 @@ where
     let layout = split_area(f);
     let bg_block = Block::default()
         .title("Rabit, the Habit Tracker")
+        .style(Style::default().fg(Color::White))
         .title_alignment(Alignment::Center);
     f.render_widget(bg_block, layout);
     let main_chunk = Layout::default()
@@ -98,11 +97,11 @@ where
     let (label_chunk, values_chunk) = (table_chunks[0], table_chunks[1]);
     // Cell Styles
     let cell_normal_style = Style::default().fg(Color::White);
-    let cell_selected_style = Style::default().fg(Color::Black).bg(Color::White);
+    let cell_selected_style = Style::default().fg(Color::Magenta).bg(Color::White);
     let cell_disabled_style = Style::default().bg(Color::DarkGray);
     let header_labels = app.tracker.get_header_labels();
     let header_cells = header_labels.iter().map(|h| {
-        return Cell::from(h.to_owned()).style(Style::default());
+        return Cell::from(h.to_owned()).style(Style::default().fg(Color::LightMagenta));
     });
     let header = Row::new(header_cells).height(1);
     let column_constraint = Constraint::Length(3);
@@ -111,7 +110,7 @@ where
     // All the tracked data
     let values = app.tracker.values();
     let value_rows = values.iter().enumerate().map(|(i, row)| {
-        let cells = row.iter().enumerate().map(|(j, r)| {
+        let cells = row.iter().enumerate().map(|(j, is_done)| {
             let (a, b) = match app.state.selected() {
                 Some((x, y)) => (x, y),
                 None => (0, 0),
@@ -129,12 +128,17 @@ where
                 cell_style = cell_disabled_style
             }
 
-            let text = match *r {
+            let text = match *is_done {
+                false => " ◦ ",
                 true => " • ",
-                false => "",
             };
 
-            Cell::from(text).style(cell_style)
+            let fg_color = match *is_done {
+                true => Color::Red,
+                false => Color::DarkGray,
+            };
+
+            Cell::from(text).style(cell_style.fg(fg_color))
         });
         Row::new(cells)
     });
@@ -144,19 +148,37 @@ where
         .header(header)
         .widths(column_width)
         .column_spacing(0);
+
     f.render_widget(values_table, values_chunk);
+
+    // Table for the name of the habit
 
     let labels = app.tracker.labels();
 
-    let habit_rows = labels.iter().map(|h| {
-        let cell = Cell::from(h.as_str()).style(Style::default().fg(Color::Green));
-        Row::new([cell])
-    });
-    let labels_table = Table::new(habit_rows)
-        .header(Row::new([Cell::from("Habits")]))
-        .widths([Constraint::Length(10)].as_ref());
+    // Was using tables before lists
+    // let habit_rows = labels.iter().map(|h| {
+    //     let cell = Cell::from(h.as_str()).style(Style::default().fg(Color::LightMagenta));
+    //     Row::new([cell])
+    // });
+    // let habit_lables_table = Table::new(habit_rows)
+    //     .header(Row::new([Cell::from("Habits")]))
+    //     .widths([Constraint::Length(10)].as_ref());
 
-    f.render_widget(labels_table, label_chunk);
+    let mut habit_list_items: Vec<ListItem> = labels
+        .iter()
+        .enumerate()
+        .map(move |(i, habit)| {
+            ListItem::new(Text::from(
+                [i.to_string().as_str(), habit.as_str()].join(" "),
+            ))
+        })
+        .collect();
+    habit_list_items.insert(0, ListItem::new(Text::from(" ")));
+    let habit_list = List::new(habit_list_items).style(Style::default().fg(Color::LightMagenta));
+
+    f.render_widget(habit_list, label_chunk);
+
+    // -----
 
     let command_bg = Block::default().style(Style::default().bg(Color::DarkGray));
 

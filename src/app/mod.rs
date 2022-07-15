@@ -1,11 +1,11 @@
-use commands::tokenizer::{tokenize, TokenType};
+use commands::tokenizer::{tokenize, Token, TokenType};
 use eyre::Result;
 
 use self::habit::{Habit, HabitTracker};
 
-pub mod pomodoro;
 pub mod ui;
 
+pub mod command;
 pub mod habit;
 
 #[derive(Default, Debug, Clone)]
@@ -46,11 +46,11 @@ impl App {
     pub fn new() -> Result<App> {
         let app = App {
             state: AppState::default(),
-            tracker: HabitTracker::random(),
+            tracker: HabitTracker::fetch_state(),
             mode: AppMode::NORMAL,
             input: String::new(),
         };
-        return Ok(app);
+        Ok(app)
     }
 
     pub fn enter_command_mode(&mut self) {
@@ -59,20 +59,8 @@ impl App {
     }
 
     pub fn execute_input(&mut self) {
-        let input = self.input.as_str();
-        if let Ok(tokens) = tokenize(input) {
-            if tokens[0].text == "add".to_owned() {
-                if tokens.len() != 3 && tokens[2].token_type != TokenType::Whitespace {
-                    self.input = "[1] Error! please use format `add 'habit name'`".to_owned();
-                    return;
-                } else {
-                    self.add_habit(tokens[2].text.to_owned());
-                    return;
-                }
-            } else {
-                self.input = "[3] Error! please use format `add 'habit name'`".to_owned();
-                return;
-            }
+        if let Ok(tokens) = tokenize(&self.input.clone()) {
+            self.handle_commands(tokens);
         } else {
             self.input = "[2] Error! please use format `add 'habit name'`".to_owned();
         }
@@ -82,7 +70,7 @@ impl App {
         self.tracker.habits.push(Habit {
             label: habit,
             done_dates: vec![],
-        })
+        });
     }
     pub fn check(&mut self) {
         if self.state.selected().is_none() {
@@ -90,10 +78,13 @@ impl App {
         }
         let (row, col) = self.state.selected().unwrap();
         let date = self.tracker.get_date_range()[col];
-        self.tracker.habits[row].check_task(date);
+        self.tracker.habits[row].check_task(date.to_string());
     }
 
     pub fn down(&mut self) {
+        if !(self.tracker.habits.len() > 1) {
+            return;
+        }
         let i = match self.state.selected() {
             Some((row, col)) => {
                 if row == self.tracker.values().len() - 1 {
@@ -108,6 +99,9 @@ impl App {
     }
 
     pub fn up(&mut self) {
+        if !(self.tracker.habits.len() > 1) {
+            return;
+        }
         let i = match self.state.selected() {
             Some((row, col)) => {
                 if row == 0 {
@@ -122,6 +116,10 @@ impl App {
     }
 
     pub fn left(&mut self) {
+        if !(self.tracker.habits.len() > 0) {
+            return;
+        }
+
         let i = match self.state.selected() {
             Some((row, col)) => {
                 if col == 0 {
@@ -137,6 +135,9 @@ impl App {
     }
 
     pub fn right(&mut self) {
+        if !(self.tracker.habits.len() > 0) {
+            return;
+        }
         let i = match self.state.selected() {
             Some((row, col)) => {
                 let length = self.tracker.values()[0].len();
@@ -150,5 +151,59 @@ impl App {
             None => (0, 0),
         };
         self.state.select(i)
+    }
+
+    // Helper to handle the user input commands
+    fn handle_commands(&mut self, tokens: Vec<Token>) {
+        match tokens[0].text {
+            // Add New_Habit
+            // total tokens = 3
+            "add" => {
+                if tokens.len() != 3 && tokens[2].token_type != TokenType::Whitespace {
+                    self.input = "[1] Error! please use format `add 'habit name'`".to_owned();
+                    return;
+                } else {
+                    let new_habit = tokens[2].text.into();
+                    self.add_habit(new_habit);
+                    return;
+                }
+            }
+            // edit {id} New_name
+            // total tokens = 5
+            "edit" => {
+                if tokens.len() != 5
+                    && tokens[2].token_type != TokenType::Whitespace
+                    && tokens[4].token_type != TokenType::Whitespace
+                {
+                    self.input = "[1] Error! please use format `eidt 1 'habit name'`".to_owned();
+                    return;
+                } else {
+                    if let Ok(id) = tokens[2].text.parse::<usize>() {
+                        if id > self.tracker.habits.len() {
+                            return;
+                        }
+                        self.tracker.habits[id].label = tokens[4].text.into();
+                    }
+                    return;
+                }
+            }
+            // delete {id}
+            // total tokens = 3
+            "delete" => {
+                if tokens.len() != 3 && tokens[2].token_type != TokenType::Whitespace {
+                    if let Ok(id) = tokens[2].text.parse::<usize>() {
+                        if id > self.tracker.habits.len() {
+                            return;
+                        }
+                        self.tracker.habits.remove(id);
+                    }
+                }
+            }
+            _ => {
+                self.input = "[3] Error! please use format `add 'habit name'`".to_owned();
+                return;
+            }
+        }
+        return;
     }
 }

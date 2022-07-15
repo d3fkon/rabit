@@ -24,6 +24,7 @@ pub fn start_ui(app: Rc<RefCell<App>>) -> Result<()> {
             match app.mode {
                 app::AppMode::NORMAL => match key.code {
                     KeyCode::Char('q') => {
+                        app.tracker.store_state();
                         break;
                     }
                     KeyCode::Char('k') => app.up(),

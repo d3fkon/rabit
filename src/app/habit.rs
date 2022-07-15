@@ -1,25 +1,24 @@
+use std::fmt::format;
+use std::fs::{self, File};
+use std::io::prelude::*;
 use std::{ops::Add, vec};
 
-use chrono::{Date, Datelike, Duration, NaiveDate, TimeZone, Utc, Weekday};
+use ::serde::{Deserialize, Serialize};
+use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc, Weekday};
 
-type D = Date<Utc>;
+const FILE_NAME: &str = "habit.json";
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+type D = DateTime<Utc>;
+
+#[derive(Debug, PartialEq, Eq, Clone, Default, Serialize, Deserialize)]
 pub struct Habit {
     pub label: String,
-    pub done_dates: Vec<chrono::Date<Utc>>,
+    pub done_dates: Vec<String>,
 }
 
 impl Habit {
-    fn random() -> Self {
-        Habit {
-            label: "random".into(),
-            done_dates: vec![],
-        }
-    }
-
-    pub fn check_task(&mut self, date: D) {
-        match self.done_dates.iter().position(|&x| x == date) {
+    pub fn check_task(&mut self, date: String) {
+        match self.done_dates.iter().position(|x| *x == date) {
             Some(i) => {
                 self.done_dates.remove(i);
             }
@@ -28,24 +27,27 @@ impl Habit {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct HabitTracker {
     pub start_date: D,
     pub habits: Vec<Habit>,
 }
 
 impl HabitTracker {
+    // Get the next week for the table
     pub fn next_week(&mut self) {
         let start_date = self.start_date;
         self.start_date = start_date.add(Duration::days(7));
     }
 
+    // Get the previous week on the table
     pub fn previous_week(&mut self) {
         let start_date = self.start_date;
         self.start_date = start_date.checked_sub_signed(Duration::days(7)).unwrap();
     }
 
-    pub fn get_date_range(&self) -> Vec<Date<Utc>> {
+    // Get the date range
+    pub fn get_date_range(&self) -> Vec<D> {
         let dates: &mut Vec<D> = &mut vec![];
         dates.push(self.start_date);
         for i in 1..7 {
@@ -54,10 +56,12 @@ impl HabitTracker {
         dates.to_owned()
     }
 
+    // Get the table header labels
     pub fn get_header_labels(&self) -> Vec<String> {
         self.get_date_range()
             .iter()
-            .map(|d| d.day().to_string())
+            // Format the header string with format()
+            .map(|d| format(format_args!("{: ^3}", d.day())).to_string())
             .collect()
     }
 
@@ -67,7 +71,7 @@ impl HabitTracker {
         let mut values: Vec<Vec<bool>> = vec![vec![false; date_range.len()]; self.habits.len()];
         for (i, habit) in self.habits.iter().enumerate() {
             for (j, date) in date_range.iter().enumerate() {
-                if habit.done_dates.contains(&date) {
+                if habit.done_dates.contains(&date.to_string()) {
                     values[i][j] = true;
                 }
             }
@@ -83,18 +87,34 @@ impl HabitTracker {
         labels
     }
 
-    fn week_bounds(week: u32) -> Date<Utc> {
+    fn week_bounds(week: u32) -> D {
         let offset = chrono::offset::Local::now();
         let current_year = offset.year();
         let mon = NaiveDate::from_isoywd(current_year, week, Weekday::Mon);
-        let sun = NaiveDate::from_isoywd(current_year, week, Weekday::Sun);
-        Date::<Utc>::from_utc(mon, Utc)
+        DateTime::<Utc>::from_utc(mon.and_hms(0, 0, 0), Utc)
     }
 
-    pub fn random() -> Self {
+    pub fn store_state(&self) {
+        let dir = dirs::config_dir().unwrap();
+        let mut file = File::create(dir.with_file_name(FILE_NAME)).unwrap();
+        file.write_all(serde_json::to_string(self).unwrap().as_bytes())
+            .unwrap();
+    }
+
+    pub fn fetch_state() -> Self {
+        let dir = dirs::config_dir().unwrap();
+        let path = dir.with_file_name(FILE_NAME);
+        let data = fs::read_to_string(path);
+        match data {
+            Ok(s) => serde_json::from_str(s.as_str()).unwrap(),
+            Err(_) => HabitTracker::default(),
+        }
+    }
+
+    pub fn default() -> Self {
         HabitTracker {
             start_date: HabitTracker::week_bounds(Utc::now().iso_week().week()),
-            habits: vec![Habit::random(); 5],
+            habits: vec![],
         }
     }
 }
