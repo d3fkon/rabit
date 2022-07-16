@@ -11,7 +11,7 @@ use tui::{
 use super::App;
 
 const TABLE_WIDTH: u16 = 39;
-const TABLE_HEIGHT: u16 = 19;
+const TABLE_HEIGHT: u16 = 30;
 const MONTHS: [&str; 12] = [
     "January",
     "February",
@@ -31,6 +31,8 @@ pub fn split_area<B>(f: &mut Frame<B>) -> Rect
 where
     B: Backend,
 {
+    let total_height = f.size().height;
+    let vertical_space = (total_height - TABLE_HEIGHT)/2;
     let hor_constraints = [
         Constraint::Ratio(1, 3),
         Constraint::Length(TABLE_WIDTH),
@@ -66,7 +68,7 @@ where
         .direction(Direction::Vertical)
         .constraints(
             [
-                Constraint::Length(12), // Main Table
+                Constraint::Length(app.tracker.habits.len() as u16 + 3), // Main Table
                 Constraint::Length(1),  // Command Bar
                 Constraint::Length(1),  // Help Bar
             ]
