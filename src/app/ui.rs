@@ -11,7 +11,6 @@ use tui::{
 use super::App;
 
 const TABLE_WIDTH: u16 = 39;
-const TABLE_HEIGHT: u16 = 30;
 const MONTHS: [&str; 12] = [
     "January",
     "February",
@@ -33,25 +32,29 @@ where
 {
     let total_height = f.size().height;
     let required_height = habit_count + 9;
-    let empty_space = total_height - required_height;
+    let empty_v_space = total_height - required_height;
 
-    let hor_constraints = [
-        Constraint::Ratio(1, 3),
-        Constraint::Min(TABLE_WIDTH),
-        Constraint::Ratio(1, 3),
+    let total_width = f.size().width;
+    let required_width = TABLE_WIDTH;
+    let empty_h_space = total_width - TABLE_WIDTH;
+
+    let h_constraints = [
+        Constraint::Length(empty_h_space / 2),
+        Constraint::Length(required_width),
+        Constraint::Length(empty_h_space / 2),
     ];
-    let ver_constraints = [
-        Constraint::Length(empty_space / 2),
+    let v_constraints = [
+        Constraint::Length(empty_v_space / 2),
         Constraint::Length(required_height),
-        Constraint::Length(empty_space / 2),
+        Constraint::Length(empty_v_space / 2),
     ];
     let sub = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(hor_constraints.clone().as_ref())
+        .constraints(h_constraints.clone().as_ref())
         .split(f.size());
     let main = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(ver_constraints.clone().as_ref())
+        .constraints(v_constraints.clone().as_ref())
         .split(sub[1]);
     return main[1];
 }
@@ -60,8 +63,8 @@ pub fn draw<B>(f: &mut Frame<B>, app: &mut App)
 where
     B: Backend,
 {
-    let count = app.tracker.habits.len() as u16;
-    let layout = split_area(f, &count);
+    let habit_count = app.tracker.habits.len() as u16;
+    let layout = split_area(f, &habit_count);
     let bg_block = Block::default()
         .title("Rabit, the Habit Tracker")
         .style(Style::default().fg(Color::White))
@@ -72,8 +75,8 @@ where
         .constraints(
             [
                 Constraint::Length(app.tracker.habits.len() as u16 + 3), // Main Table
-                Constraint::Length(1),  // Command Bar
-                Constraint::Length(1),  // Help Bar
+                Constraint::Length(1),                                   // Command Bar
+                Constraint::Length(1),                                   // Help Bar
             ]
             .as_ref(),
         )
@@ -85,7 +88,7 @@ where
 
     let inner_table_chunk = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(2), Constraint::Length(TABLE_HEIGHT - 2)])
+        .constraints([Constraint::Length(2), Constraint::Length(habit_count)])
         .split(top_chunk);
 
     let (heading_chunk, table_chunk) = (inner_table_chunk[0], inner_table_chunk[1]);
