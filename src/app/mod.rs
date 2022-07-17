@@ -43,6 +43,7 @@ pub struct App {
 }
 
 impl App {
+    /// Create a new app
     pub fn new() -> Result<App> {
         let app = App {
             state: AppState::default(),
@@ -53,11 +54,16 @@ impl App {
         Ok(app)
     }
 
+    /// Enter the command mode, to execute the following commands
+    /// This will enable the user command bar input and take commands for execution
+    /// Sets the App.mode to COMMAND
     pub fn enter_command_mode(&mut self) {
         self.input = String::new();
         self.mode = AppMode::COMMAND;
     }
 
+    /// Execute a command fed into the command buffer
+    /// If the command is wrong display the help text
     pub fn execute_input(&mut self) {
         if let Ok(tokens) = tokenize(&self.input.clone()) {
             self.handle_commands(tokens);
@@ -66,13 +72,18 @@ impl App {
         }
     }
 
+    /// Execute the "add" command and add a habit to the tracker
+    /// Pushed a new habit with the name to the tracker
+    /// TODO: Take in more complex habits
     pub fn add_habit(&mut self, habit: String) {
         self.tracker.habits.push(Habit {
             label: habit,
             done_dates: vec![],
         });
     }
-    pub fn check(&mut self) {
+
+    /// Mark Habit as done or undone based on the given state
+    pub fn mark_habit(&mut self) {
         if self.state.selected().is_none() {
             return;
         }
@@ -81,7 +92,8 @@ impl App {
         self.tracker.habits[row].check_task(date.to_string());
     }
 
-    pub fn down(&mut self) {
+    /// Move the cursor down
+    pub fn move_cursor_down(&mut self) {
         if !(self.tracker.habits.len() > 1) {
             return;
         }
@@ -98,7 +110,8 @@ impl App {
         self.state.select(i)
     }
 
-    pub fn up(&mut self) {
+    /// Move cursor up
+    pub fn move_cursor_up(&mut self) {
         if !(self.tracker.habits.len() > 1) {
             return;
         }
@@ -115,7 +128,8 @@ impl App {
         self.state.select(i)
     }
 
-    pub fn left(&mut self) {
+    /// Move cursor left
+    pub fn move_cursor_left(&mut self) {
         if !(self.tracker.habits.len() > 0) {
             return;
         }
@@ -134,7 +148,8 @@ impl App {
         self.state.select(i)
     }
 
-    pub fn right(&mut self) {
+    /// Move cursor right
+    pub fn move_cursor_right(&mut self) {
         if !(self.tracker.habits.len() > 0) {
             return;
         }
@@ -153,11 +168,12 @@ impl App {
         self.state.select(i)
     }
 
-    // Helper to handle the user input commands
+    /// Helper method to handle command inputs
+    /// Private method for being called from {execute_input}
     fn handle_commands(&mut self, tokens: Vec<Token>) {
         match tokens[0].text {
-            // Add New_Habit
-            // total tokens = 3
+            // Add new habit
+            // example: `add {HABIT_NAME}`
             "add" => {
                 if tokens.len() != 3 && tokens[2].token_type != TokenType::Whitespace {
                     self.input = "[1] Error! please use format `add 'habit name'`".to_owned();
@@ -168,14 +184,14 @@ impl App {
                     return;
                 }
             }
-            // edit {id} New_name
-            // total tokens = 5
+            // Edit an existing habit
+            // example: `edit {HABIT_ID} {NEW_HABIT_NAME}`
             "edit" => {
                 if tokens.len() != 5
                     && tokens[2].token_type != TokenType::Whitespace
                     && tokens[4].token_type != TokenType::Whitespace
                 {
-                    self.input = "[1] Error! please use format `eidt 1 'habit name'`".to_owned();
+                    self.input = "[1] Error! please use format `edit 1 'habit name'`".to_owned();
                     return;
                 } else {
                     if let Ok(id) = tokens[2].text.parse::<usize>() {
@@ -187,10 +203,13 @@ impl App {
                     return;
                 }
             }
-            // delete {id}
-            // total tokens = 3
+            // Delete an existing habit
+            // example: `delete {HABIT_ID}`
             "delete" => {
                 if tokens.len() != 3 && tokens[2].token_type != TokenType::Whitespace {
+                    self.input = "[1] Error! please use format `add 'habit name'`".to_owned();
+                    return;
+                } else {
                     if let Ok(id) = tokens[2].text.parse::<usize>() {
                         if id > self.tracker.habits.len() {
                             return;
@@ -199,8 +218,9 @@ impl App {
                     }
                 }
             }
+
             _ => {
-                self.input = "[3] Error! please use format `add 'habit name'`".to_owned();
+                self.input = "[3] only add, edit & delete supported'`".to_owned();
                 return;
             }
         }

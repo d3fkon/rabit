@@ -8,6 +8,7 @@ use tui::{backend::CrosstermBackend, Terminal};
 
 pub mod app;
 
+/// Start the UI of the application
 pub fn start_ui(app: Rc<RefCell<App>>) -> Result<()> {
     let stdout = stdout();
     crossterm::terminal::enable_raw_mode()?;
@@ -16,6 +17,7 @@ pub fn start_ui(app: Rc<RefCell<App>>) -> Result<()> {
     terminal.clear()?;
     terminal.hide_cursor()?;
 
+    // Render Loop
     loop {
         let mut app = app.borrow_mut();
         terminal.draw(|rect| ui::draw(rect, &mut app))?;
@@ -27,11 +29,11 @@ pub fn start_ui(app: Rc<RefCell<App>>) -> Result<()> {
                         app.tracker.store_state();
                         break;
                     }
-                    KeyCode::Char('k') => app.up(),
-                    KeyCode::Char('j') => app.down(),
-                    KeyCode::Char('h') => app.left(),
-                    KeyCode::Char('l') => app.right(),
-                    KeyCode::Char(' ') => app.check(),
+                    KeyCode::Char('k') => app.move_cursor_up(),
+                    KeyCode::Char('j') => app.move_cursor_down(),
+                    KeyCode::Char('h') => app.move_cursor_left(),
+                    KeyCode::Char('l') => app.move_cursor_right(),
+                    KeyCode::Char(' ') => app.mark_habit(),
                     KeyCode::Char(':') => app.enter_command_mode(),
                     _ => {}
                 },

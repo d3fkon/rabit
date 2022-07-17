@@ -27,21 +27,23 @@ const MONTHS: [&str; 12] = [
     "December",
 ];
 
-pub fn split_area<B>(f: &mut Frame<B>) -> Rect
+pub fn split_area<B>(f: &mut Frame<B>, habit_count: &u16) -> Rect
 where
     B: Backend,
 {
     let total_height = f.size().height;
-    let vertical_space = (total_height - TABLE_HEIGHT)/2;
+    let required_height = habit_count + 9;
+    let empty_space = total_height - required_height;
+
     let hor_constraints = [
         Constraint::Ratio(1, 3),
-        Constraint::Length(TABLE_WIDTH),
+        Constraint::Min(TABLE_WIDTH),
         Constraint::Ratio(1, 3),
     ];
     let ver_constraints = [
-        Constraint::Ratio(1, 3),
-        Constraint::Length(TABLE_HEIGHT),
-        Constraint::Ratio(1, 3),
+        Constraint::Length(empty_space / 2),
+        Constraint::Length(required_height),
+        Constraint::Length(empty_space / 2),
     ];
     let sub = Layout::default()
         .direction(Direction::Horizontal)
@@ -58,7 +60,8 @@ pub fn draw<B>(f: &mut Frame<B>, app: &mut App)
 where
     B: Backend,
 {
-    let layout = split_area(f);
+    let count = app.tracker.habits.len() as u16;
+    let layout = split_area(f, &count);
     let bg_block = Block::default()
         .title("Rabit, the Habit Tracker")
         .style(Style::default().fg(Color::White))
