@@ -26,6 +26,8 @@ const MONTHS: [&str; 12] = [
     "December",
 ];
 
+/// Split the terminal area into major chunks such that the UI is always centered
+/// Calculate the length and the width of the tracker contents to ensure the content is centered
 pub fn split_area<B>(f: &mut Frame<B>, habit_count: &u16) -> Rect
 where
     B: Backend,
@@ -59,17 +61,20 @@ where
     return main[1];
 }
 
+/// The main UI function to draw the table
 pub fn draw<B>(f: &mut Frame<B>, app: &mut App)
 where
     B: Backend,
 {
-    let habit_count = app.tracker.habits.len() as u16;
-    let layout = split_area(f, &habit_count);
+    let habit_count = app.tracker.habits.len() as u16; // Habit count
+    let layout = split_area(f, &habit_count); // Main Layout
     let bg_block = Block::default()
-        .title("Rabit, the Habit Tracker")
+        .title("My Habits")
         .style(Style::default().fg(Color::White))
         .title_alignment(Alignment::Center);
-    f.render_widget(bg_block, layout);
+    f.render_widget(bg_block, layout); // Render the title
+
+    // The main chunk at the center of the grid
     let main_chunk = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
@@ -84,6 +89,7 @@ where
         .vertical_margin(2)
         .split(layout);
 
+    // Rename
     let (top_chunk, cl_chunk, help_chunk) = (main_chunk[0], main_chunk[1], main_chunk[2]);
 
     let inner_table_chunk = Layout::default()
@@ -93,6 +99,7 @@ where
 
     let (heading_chunk, table_chunk) = (inner_table_chunk[0], inner_table_chunk[1]);
 
+    // Current month for tracking
     let month = MONTHS[app.tracker.start_date.month() as usize - 1].to_owned();
 
     let title = Paragraph::new(Text::from(month)).alignment(Alignment::Left);
@@ -103,6 +110,7 @@ where
         .constraints([Constraint::Length(10), Constraint::Max(3 * 7)].as_ref())
         .split(table_chunk);
     let (label_chunk, values_chunk) = (table_chunks[0], table_chunks[1]);
+
     // Cell Styles
     let cell_normal_style = Style::default().fg(Color::White);
     let cell_selected_style = Style::default().fg(Color::Magenta).bg(Color::White);

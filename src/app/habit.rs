@@ -3,13 +3,16 @@ use std::fs::{self, File};
 use std::io::prelude::*;
 use std::{ops::Add, vec};
 
-use ::serde::{Deserialize, Serialize};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc, Weekday};
+use serde::{Deserialize, Serialize};
 
 const FILE_NAME: &str = "habit.json";
 
 type D = DateTime<Utc>;
 
+/// Habit - Represents one Habit
+/// label is the name of the habit
+/// done_dates are the dates on which the Habit is marked as done
 #[derive(Debug, PartialEq, Eq, Clone, Default, Serialize, Deserialize)]
 pub struct Habit {
     pub label: String,
