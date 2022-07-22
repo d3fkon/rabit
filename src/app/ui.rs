@@ -26,8 +26,7 @@ const MONTHS: [&str; 12] = [
     "December",
 ];
 
-/// Split the terminal area into major chunks such that the UI is always centered
-/// Calculate the length and the width of the tracker contents to ensure the content is centered
+/// Split the terminal area into major chunks such that the UI is always centered Calculate the length and the width of the tracker contents to ensure the content is centered
 pub fn split_area<B>(f: &mut Frame<B>, habit_count: &u16) -> Rect
 where
     B: Backend,
@@ -124,9 +123,9 @@ where
     let column_width = &[column_constraint; 7];
 
     // All the tracked data
-    let values = app.tracker.values();
+    let values = app.tracker.values_v2();
     let value_rows = values.iter().enumerate().map(|(i, row)| {
-        let cells = row.iter().enumerate().map(|(j, is_done)| {
+        let cells = row.iter().enumerate().map(|(j, stat)| {
             let (a, b) = match app.state.selected() {
                 Some((x, y)) => (x, y),
                 None => (0, 0),
@@ -144,14 +143,18 @@ where
                 cell_style = cell_disabled_style
             }
 
-            let text = match *is_done {
-                false => " ◦ ",
-                true => " • ",
+            let text = match &*stat {
+                None => String::from(" ◦ "),
+                // Some(s) => format!(" {} ", s).to_string()
+                Some(s) => match s.as_str() {
+                    "true" => String::from(" • "),
+                    s => format!(" {} ", s).to_string(),
+                },
             };
 
-            let fg_color = match *is_done {
-                true => Color::Red,
-                false => Color::DarkGray,
+            let fg_color = match &*stat {
+                None => Color::Red,
+                Some(_) => Color::DarkGray,
             };
 
             Cell::from(text).style(cell_style.fg(fg_color))
@@ -206,6 +209,7 @@ where
     let mode = match app.mode {
         super::AppMode::NORMAL => "NORMAL Mode",
         super::AppMode::COMMAND => "COMMAND Mode",
+        super::AppMode::HABIT => "HABIT mode",
     };
 
     let text = Paragraph::new(Text::from(

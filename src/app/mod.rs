@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use commands::tokenizer::{tokenize, Token, TokenType};
 use eyre::Result;
 
@@ -32,6 +34,7 @@ impl AppState {
 pub enum AppMode {
     NORMAL,
     COMMAND,
+    HABIT,
 }
 
 #[derive(Debug, Clone)]
@@ -75,8 +78,10 @@ impl App {
     /// Execute the "add" command and add a habit to the tracker
     /// Pushed a new habit with the name to the tracker
     /// TODO: Take in more complex habits
-    pub fn add_habit(&mut self, habit: String) {
+    pub fn add_habit(&mut self, habit: String, habit_type: habit::HabitType) {
         self.tracker.habits.push(Habit {
+            stats: HashMap::new(),
+            habit_type,
             label: habit,
             done_dates: vec![],
         });
@@ -89,7 +94,30 @@ impl App {
         }
         let (row, col) = self.state.selected().unwrap();
         let date = self.tracker.get_date_range()[col];
-        self.tracker.habits[row].check_task(date.to_string());
+        let habit = &mut self.tracker.habits[row];
+        match habit.habit_type {
+            habit::HabitType::BIT => {
+                habit.check_task(date.to_string(), None);
+            }
+            habit::HabitType::COUNT => {
+                habit.check_task(date.to_string(), Some('1'));
+            }
+            habit::HabitType::ALPHA => {
+                // Enter command mode to take in the char input
+                self.mode = AppMode::HABIT;
+            }
+        }
+    }
+
+    /// Mark the completion of habit entry
+    pub fn complete_mark_habit(&mut self, c: char) {
+        if self.state.selected().is_none() {
+            return;
+        }
+        let (row, col) = self.state.selected().unwrap();
+        let date = self.tracker.get_date_range()[col];
+        let habit = &mut self.tracker.habits[row];
+        habit.check_task(date.to_string(), Some(c));
     }
 
     /// Move the cursor down
@@ -174,13 +202,41 @@ impl App {
         match tokens[0].text {
             // Add new habit
             // example: `add {HABIT_NAME}`
+            // TODO: Add better command erroring
             "add" => {
-                if tokens.len() != 3 && tokens[2].token_type != TokenType::Whitespace {
-                    self.input = "[1] Error! please use format `add 'habit name'`".to_owned();
+                let err_str = "[1] Error! please use format `add 'habit name'`".to_owned();
+                let err_str_3 = "[3] Error! please use format `add 'habit name'`".to_owned();
+                let length = tokens.len();
+                if length == 3 && tokens[1].token_type != TokenType::Whitespace {
+                    self.input = err_str;
                     return;
                 } else {
+                    if length != 3 && length != 5 {
+                        self.input = format!("Len - {:?}", length);
+                        println!("Invalid length {:?}", length);
+                        return;
+                    }
+                    // Handle commands with types
+                    if length > 3 && tokens[3].token_type != TokenType::Whitespace {
+                        self.input = err_str_3;
+                        return;
+                    }
+                    // Handle habit types of APHA and COUNT
+                    let mut habit_type = habit::HabitType::BIT;
+                    if length == 5 {
+                        let type_token = tokens[4].text;
+                        match type_token.parse::<i32>() {
+                            Ok(i) => {
+                                // The type token is an integer, and hence the habit type can be count
+                                habit_type = habit::HabitType::COUNT;
+                            }
+                            Err(_) => {
+                                habit_type = habit::HabitType::ALPHA;
+                            }
+                        }
+                    }
                     let new_habit = tokens[2].text.into();
-                    self.add_habit(new_habit);
+                    self.add_habit(new_habit, habit_type);
                     return;
                 }
             }

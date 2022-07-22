@@ -33,7 +33,11 @@ pub fn start_ui(app: Rc<RefCell<App>>) -> Result<()> {
                     KeyCode::Char('j') => app.move_cursor_down(),
                     KeyCode::Char('h') => app.move_cursor_left(),
                     KeyCode::Char('l') => app.move_cursor_right(),
-                    KeyCode::Char(' ') => app.mark_habit(),
+                    KeyCode::Char(' ') => {
+                        // If the habit is of type BIT, then mark it
+                        // Otherwise, enter HABIT mode
+                        app.mark_habit();
+                    }
                     KeyCode::Char(':') => app.enter_command_mode(),
                     _ => {}
                 },
@@ -49,6 +53,13 @@ pub fn start_ui(app: Rc<RefCell<App>>) -> Result<()> {
                     }
                     KeyCode::Backspace => {
                         app.input.pop();
+                    }
+                    _ => {}
+                },
+                app::AppMode::HABIT => match key.code {
+                    KeyCode::Char(c) => {
+                        app.complete_mark_habit(c);
+                        app.mode = AppMode::NORMAL;
                     }
                     _ => {}
                 },
