@@ -37,6 +37,12 @@ $ cp target/release/rabit /usr/bin  # Copy the binary into one of your $PATH dir
 1. Enter command mode by pressing `:`
 2. Add your habit `add {HABIT_NAME}`
 
+Habit Types:
+
+1. BIT - Your normal boolean type
+2. COUNT - Type where you can count the number of times you performed the habit
+3. ALPHA - Type where you can enter a single CHAR to track the habit your performed
+
 #### Edit a habit
 
 1. Enter command mode by pressing `:`
@@ -49,12 +55,12 @@ $ cp target/release/rabit /usr/bin  # Copy the binary into one of your $PATH dir
 
 ---
 
-### Roadmap
+### Things to do
 
-1. Locking habit marking for only for _Today_
-2. Allow habits with longer names
-3. Make the TUI look more cute
-4. Config file to change colors and characters on the UI
-5. Add different inputs for a task. Beyond just true false
+- [ ] Locking habit marking for only for _Today_
+- [ ] Allow habits with longer names
+- [x] Make the TUI look more cute (?????)
+- [ ] Config file to change colors and characters on the UI
+- [x] Add different inputs for a task. Beyond just true false
 
 ---
